@@ -1,0 +1,146 @@
+\documentclass[12pt]{article}
+
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage[table]{xcolor}
+
+\usepackage{longtable}
+\begin{document}
+\begin{titlepage}
+   \begin{center}
+       \vspace*{1cm}
+
+       \textbf{KNN Accelerator and Timer Design}
+
+       
+            
+       \vspace{1.5cm}
+	\textbf{Author:}
+       \textbf{Muhammmad Sharjeel Khilji}
+
+       \vfill
+            
+            
+   \end{center}
+\end{titlepage}
+\tableofcontents
+\pagebreak
+\section{IOB SoC Introduction}
+IOB SoC is an open source RISC V (Pico RV32) based SoC which comprises of on chip boot ROM, an SRAM, instruction and data L1 cache and shared L2 cache and a number of peripherals like UART and Ethernet. 
+The SoC has flexibility of adding any new peripheral to it and is programmed in Verilog HDL. This assignment aims at adding K nearest neighbours KNN algorithm as an accelerator to IOB-SoC. The KNN algorithm is already there in IOB-SoC in software. This software has potential bottlenecks in the performance of the algorithm which includes Euclidean distance calculation and neighbour sorting. This assignment aims at these bottlenecks by accelerating them in hardware (FPGA).
+\section{KNN Algorithm}
+KNN is a basic machine learning algorithm used for classifying the test items (data sets to be classified) by comparing it with already classified data set. The algorithm works by finding distance between a test set item and all the data set items. Then out of all those distances the ones that have smallest distance to the test item are kept as K number of nearest neighbours of that test item. The class or label which most of the K nearest neighbours of the test item has becomes the class of that test item.
+The Euclidean distance calculation between one test and data item pair involves two subtractions, two multiplications and one addition operation which becomes a bottleneck in the performance of KNN algorithm. Distance calculation is accelerated in the hardware. In hardware distance calculation between two points takes one cycle in pipeline datapath.
+\section{Euclidean Distance Calculation Core}
+The core for distance calculation is added to the IOB SoC as a peripheral and has a generic slave interface. IOB SoC uses a six signals bus to connect memory peripherals and I/O devices to CPU. The signals in this bus include 32-bit address and data (separate read data and write data) lines along with the strobe signal (to indicate the byte(s) of the data bus in use) and a slave ready signal.KNN core has slave interface that connects with the system bus. KNN core has memory mapped registers that are software programmable and are used to communicate with the CPU.
+\subsection{Hardware Design}
+The hardware design for distance calculation includes has separate FSM and datapath.
+\subsubsection{FSM}
+The FSM for the hardware has three states (IDLE, COMPUTE, OUTPUT). The FSM remains in the reset state i.e., IDLE untill it receives the Start signal from CPU. CPU sends Start signal by writing it to the software programmable register. Before giving the Start Signal CPU writes the complete data set and the test point to the KNN accelerator. The data set is written only once for entire calculation of distances for all test points.
+Upon receiving the Start signal from CPU FSM transitions to COMPUTE state. In this state distances between the test point and all the data points are calculated. When all the distances are calculated, the FSM transitions to OUTPUT state. In this state FSM sends the Valid Out signal to CPU. CPU polls for this valid signal and when valid out signal is found the CPU then reads all the distances from the accelerator along with their index values. After reading all distance values the CPU turns the Start FSM signal low and the FSM transitions to its IDLE state.
+\subsubsection{Datapath}
+The datapath to perform this calculation has pipeline structure. Inputs to this datapath are data and test points which are signed 32 bit binary numbers. These inputs are applied to two subtractors. These subtractors calculate difference between x co-ordinates and y co-ordinates of the two numbers. Output of subtractors is checked for negative numbers by checking the MSB bit of the difference number. If it is a negative number, its Two's complement is calculated before it is applied to two DSP multipliers. \\
+The DSP multipliers takes the square of the difference calculated by the subtractor. These multipliers are mapped to DSP Multiplier blocks of the FPGA. Finally, the output of two DSP multipliers is applied to an adder to calculate the final sum. This sum is the square of the Euclidean's distance between test and data points.\\
+This datapath has three control steps for calculating difference between x co-ordinates and y co-ordinates of two points and for calculating square of differences and finally calculating Euclidean's distance by adding the output of multipliers. Output of each stage of the datapath goes directly in to the register. In this way this datapath becomes a pipeline datapath in which distance between one test point and one data point is calculated in one clock cycle.
+
+\section{Results}
+As compared to the software implementation of KNN the accelerator based KNN shows an improvement  of 1252usec in the execution time for a work load of N=127 data points K=6 neighbours and M=3 number of test points to be classified. The speedup= Software execution time / Software with hardware execution time = 6365/4842 = 1.32
+\section{64-Bit free running timer}
+In order to calculate the exeution time of the KNN algorithm. There is a timer peripheral  attached with the procesor with generic CPU interface (CPU Bus). This timer is a 64-bit free running timer with software programmable wrap around value. Tiimer can be sampled at any timer through software and can be used to calculate the execution time in the code.
+\section{Appendix} 
+\subsection{Synthesis Report}
+Synthesis report for the core of the hardware accelerator when synthesized for Virtex 7 FPGA in Vivado 2021, has produced following synthesis results. \\
+RTL component statistics are as follows,
+\begin{enumerate}
+\item Adder utilization
+
+
+\rowcolors{3}{white!9}{white!6}  
+\begin{tabular}{ *5l }    \toprule
+\emph{Adders} & \emph{Number} &&& \\\midrule
+2 Input 16-bit adders    & 2  \\ 
+2 input 8-bit adders  	 & 1  \\
+2 Input 7-bit adders   	 & 2  \\
+\end{tabular}\\\\
+
+
+\item Registers utilization
+
+\rowcolors{1}{white!9}{white!6}  
+\begin{tabular}{ *5l }    \toprule
+\emph{Registers} & \emph{Number}  \\\midrule
+33 bit Registers & 1  \\ 
+32 bit Registers & 144 \\
+17 bit Registers & 2  \\
+8  bit Registers & 1 \\
+7  bit Registers & 14\\
+1  bit Registers & 2\\
+\end{tabular}\\\\
+
+
+\item Muxes utilization
+
+
+\rowcolors{1}{white!9}{white!6} 
+\begin{tabular}{ *5l }    \toprule
+\emph{Muxes} & \emph{Number}  \\\midrule
+2 Input 32 bit   & 12  \\ 
+5 Input 32 bit   & 1 \\
+6 Input 32 bit   & 1  \\
+2 Input 17 bit   & 2 \\
+2 Input 8 bit    & 1\\
+2 Input 7 bit    & 44\\
+6 Input 7 bit    & 3\\
+3 Input 7 bit    & 1\\
+5 Input 7 bit    & 2\\
+4 Input 3 bit    & 1\\
+2 Input 3 bit    & 2\\
+2 Input 2 bit    & 1\\
+2 Input 1 bit    & 24\\
+4 Input 1 bit    & 1\\
+7 Input 1 bit    & 5\\
+5 Input 1 bit    & 1\\
+6 Input 1 bit    & 1\\
+8 Input 1 bit    & 1\\
+
+\end{tabular}\\\\
+
+
+\item DSP Multipliers used for mapping two multiplication operations\\
+
+\rowcolors{1}{white!9}{white!6}  
+\begin{tabular}{ *5l }    \toprule
+\emph{ DSPs} & \emph{Number}  \\\midrule
+DSP48E1 only     & 2  \\ 
+
+\end{tabular}\\\\
+
+
+\item Registers with asynchronous and synchronous reset\\
+
+\rowcolors{1}{white!9}{white!6} 
+\begin{tabular}{ *5l }    \toprule
+\emph{ Registers} & \emph{Number}  \\\midrule
+With clock enable and asynchronous reset     & 4571  \\ 
+With clock enable and synchronous reset      &234
+
+\end{tabular}\\\\
+
+
+\item Slice logic\\
+
+
+\rowcolors{1}{white!9}{white!6}  
+\begin{tabular}{ *5l }    \toprule
+\emph{ Site type} & \emph{Number}  \\\midrule
+Slice LUTs as logic     & 1628  \\ 
+Slice LUTs as memory    &  0 \\
+Slice registers as flip flops & 4806\\
+Slice registers as latch      & 0 \\
+F7 Muxes & 512\\
+F8 Muxes & 256\\
+
+\end{tabular}\\\\
+\end{enumerate}
+\end{document}
