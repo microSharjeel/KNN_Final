@@ -1,1 +1,4 @@
 # iob-soc-knn
+This peripheral has hardware to accelerate the KNN algorithm in hardware. This accelerated part of KNN algorithm calculates distance between a test point and all the data points and then finds nearest neighbours of the test points (those data points that are closest to the test point) and sort them in ascendinng order. This sorted array of nearest neighbours along with their indexes (index of neighbours in data points set) are written back to software accessible registers. These neighbours and indexes are read by the KNN algorithm software which is running in iob_SoC CPU. 
+According to the results, this hardware implementation of a part of KNN algorithm that calculates the distances between data points and a test point and then sorts the distances in ascending order and selects the nearest neighbour results in significant speedup in KNN execution time as compared to software only implementation of KNN algorithm.
+
