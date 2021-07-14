@@ -365,7 +365,7 @@ end
 	else
 	begin
 	  case(state)
-	     IDLE:	
+	         IDLE:	
 			if((KNN_START_FSM==1)) 
 			begin	
 				state <= COMPUTE;
