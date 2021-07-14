@@ -376,11 +376,11 @@ end
      			end
          	    
 		 COMPUTE:
-			if( (count_wr <= `K_NUM_DATA_PTS+1)  &&(KNN_START_FSM==1) )
+			 if( (count_wr <= `K_NUM_DATA_PTS+2)  &&(KNN_START_FSM==1) ) //(count_wr <= `K_NUM_DATA_PTS+1)
 			begin
 				state <= COMPUTE;
 			end
-			else if ( (count_wr > `K_NUM_DATA_PTS+1)&&(KNN_START_FSM==1)  )
+		  else if ( (count_wr > `K_NUM_DATA_PTS+2) &&(KNN_START_FSM==1)  )//(count_wr > `K_NUM_DATA_PTS+1)
 			begin
 	
 				state <= OUTPUT;
@@ -410,26 +410,26 @@ always @(posedge clk or posedge rst)
 		KNN_START_O   <= 1'b0;
 		KNN_TEST_PT_O <= 32'd0;
 		KNN_DATA_PT_O <= 32'd0;
-		//cnt<=3'd0;
+		
 		
 	end
 	else 
 	begin
-		 if(state==COMPUTE &&  count_wr <= (`K_NUM_DATA_PTS+1))
+		if(state==COMPUTE &&  count_wr <= (`K_NUM_DATA_PTS+2)) // (`K_NUM_DATA_PTS+1)
 		 begin	
 			if(count_wr<=(`K_NUM_DATA_PTS-1))
 			begin
 				KNN_TEST_PT_O <= KNN_TEST_PT_FSM;
 				KNN_DATA_PT_O <= data_points[count_wr];
 				KNN_START_O   <= 1'b1;
-				//cnt<=cnt+1;
+				
 			end
-			else if(count_wr>(`K_NUM_DATA_PTS-1))
+			 else if(count_wr>(`K_NUM_DATA_PTS-1) && (count_wr<=`K_NUM_DATA_PTS+1)) //(count_wr>(`K_NUM_DATA_PTS-1))
 			begin
 				KNN_TEST_PT_O <= 32'd0;
 				KNN_DATA_PT_O <= 32'd0;
 				KNN_START_O   <= 1'b1;
-				//cnt<=0;
+				
 			end	
 			count_wr <= count_wr +1;
 			
@@ -440,7 +440,7 @@ always @(posedge clk or posedge rst)
 			KNN_DATA_PT_O <= 32'd0;
 			KNN_START_O   <= 1'b0;
 			count_wr<= 0;
-			//cnt<=0;
+			
 			
 		 end
 	end
